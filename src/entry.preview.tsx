@@ -14,6 +14,7 @@ import { createQwikCity } from "@builder.io/qwik-city/middleware/node";
 import render from "./entry.ssr";
 import qwikCityPlan from "@qwik-city-plan";
 import { IncomingMessage, ServerResponse } from "http";
+import { randomBytes } from "crypto";
 
 const { router, notFound, staticFile } = createQwikCity({
   render,
@@ -27,6 +28,7 @@ type MiddlewareFn = (
   nonce?: string
 ) => void;
 
+// Each middleware function to run sequentially
 const middleware: MiddlewareFn[] = [staticFile, router, notFound];
 
 const handler = (
@@ -36,10 +38,16 @@ const handler = (
   let i = 0;
   const len = middleware.length;
 
-  const nonce = "123456";
+  // Create a nonce
+  const nonce = randomBytes(16).toString("base64");
+
+  // Add it to the CSP policy
   const csp = `default-src 'self' 'unsafe-inline'; script-src 'self' 'nonce-${nonce}';`;
+
+  // Set the CSP policy header
   res.setHeader("Content-Security-Policy", csp);
 
+  // Loop through each middleware function
   const next = (err: any) => (err ? undefined : loop());
   const loop = () =>
     res.writableEnded || (i < len && middleware[i++](req, res, next, nonce));
