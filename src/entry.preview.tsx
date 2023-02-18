@@ -14,18 +14,31 @@ import { createQwikCity } from "@builder.io/qwik-city/middleware/node";
 import render from "./entry.ssr";
 import qwikCityPlan from "@qwik-city-plan";
 import { IncomingMessage, ServerResponse } from "http";
-import { randomBytes } from "crypto";
 
 const { router, notFound, staticFile } = createQwikCity({
   render,
   qwikCityPlan,
+  headers: {
+    "Origin-Agent-Cluster": "?1",
+    "Referrer-Policy": "no-referrer",
+    "Strict-Transport-Security": "max-age=15552000; includeSubDomains",
+    "X-Content-Type-Options": "nosniff",
+    "X-DNS-Prefetch-Control": "off",
+    "X-Download-Options": "noopen",
+    "X-Frame-Options": "SAMEORIGIN",
+    "X-Permitted-Cross-Domain-Policies": "none",
+    "X-XSS-Protection": "0",
+  },
+  nonce: true,
+  contentSecurityPolicy: {
+    scriptSrc: `'self' 'unsafe-inline' 'strict-dynamic'`,
+  },
 });
 
 type MiddlewareFn = (
   req: IncomingMessage,
   res: ServerResponse<IncomingMessage>,
-  next: (err: any) => void,
-  nonce?: string
+  next: (err: any) => void
 ) => void;
 
 // Each middleware function to run sequentially
@@ -38,19 +51,10 @@ const handler = (
   let i = 0;
   const len = middleware.length;
 
-  // Create a nonce
-  const nonce = randomBytes(16).toString("base64");
-
-  // Add it to the CSP policy
-  const csp = `default-src 'self' 'unsafe-inline'; script-src 'self' 'nonce-${nonce}';`;
-
-  // Set the CSP policy header
-  res.setHeader("Content-Security-Policy", csp);
-
   // Loop through each middleware function
   const next = (err: any) => (err ? undefined : loop());
   const loop = () =>
-    res.writableEnded || (i < len && middleware[i++](req, res, next, nonce));
+    res.writableEnded || (i < len && middleware[i++](req, res, next));
 
   loop();
 };
