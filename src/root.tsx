@@ -9,7 +9,7 @@ import { RouterHead } from "./components/router-head/router-head";
 import "./global.css";
 
 export default component$(() => {
-  const nonce = useServerData("nonce");
+  const nonce = useServerData<string | undefined>("nonce");
 
   return (
     <QwikCityProvider>
